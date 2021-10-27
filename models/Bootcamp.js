@@ -100,7 +100,7 @@ const BootcampSchema = new mongoose.Schema({
   },
 });
 
-//Create a Bootcamp Schema from the name
+//Create a Bootcamp Schema Slug from the name
 BootcampSchema.pre('save', function (next) {
   this.slug = slugify(this.name, { lower: true });
   next();
@@ -116,7 +116,7 @@ BootcampSchema.pre('save', async function (next) {
     street: loc[0].streetName,
     city: loc[0].city,
     state: loc[0].stateCode,
-    zipcode: loc[0].zipCode,
+    zipcode: loc[0].zipcode,
     country: loc[0].countryCode,
   };
 

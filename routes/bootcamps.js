@@ -13,7 +13,7 @@ const router = express.Router();
 
 router.route('/radius/:zipcode/:distance').get(getBootcampInRadius);
 
-//router.route('/').get(getBootcamps).post(createBootcamp);
+router.route('/').get(getBootcamps).post(createBootcamp);
 
 router
   .route('/:id')
