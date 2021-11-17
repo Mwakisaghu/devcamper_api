@@ -1,4 +1,5 @@
 const ErrorResponse = require('../utils/errorResponse');
+const crypto = require('crypto');
 const asyncHandler = require('../middleware/async');
 const sendEmail = require('../utils/sendEmail');
 const User = require('../models/User');
@@ -74,13 +75,12 @@ exports.forgotPassword = asyncHandler(async (req, res, next) => {
 
   //Get reset Token
   const resetToken = user.getResetPasswordToken();
-
   await user.save({ validateBeforeSave: false });
 
   //Create reset url
   const resetUrl = `${req.protocol}://${req.get(
     'host'
-  )}/api/v1/resetpassword/${resetToken}`;
+  )}/api/v1/auth/resetpassword/${resetToken}`;
 
   const message = `you are receiving this email because you, or someone else, has requested a password reset. Please make a PUT request to: \n\n ${resetUrl}`;
 
@@ -90,7 +90,11 @@ exports.forgotPassword = asyncHandler(async (req, res, next) => {
       subject: 'password reset token',
       message,
     });
-    res.status(200).json({ sucess: true, data: 'Email sent' });
+    res.status(200).json({ success: true, data: 'Email sent' });
+    // res.status(200).json({
+    //   success: true,
+    //   data: user,
+    // });
   } catch (err) {
     console.log(err);
     user.resetPasswordToken = undefined;
@@ -100,11 +104,35 @@ exports.forgotPassword = asyncHandler(async (req, res, next) => {
 
     return next(new ErrorResponse('Email could not be sent', 500));
   }
+});
 
-  res.status(200).json({
-    success: true,
-    data: user,
+//@desc          Reset Password
+//@route         PUT /api/v1/auth/resetpassword/:resettoken
+//@access        Public
+
+exports.resetPassword = asyncHandler(async (req, res, next) => {
+  //Get hashed Token
+  const resetPasswordToken = crypto
+    .createHash('sha256')
+    .update(req.params.resettoken)
+    .digest('hex');
+
+  const user = await User.findOne({
+    resetPasswordToken,
+    resetPasswordExpire: { $gt: Date.now() },
   });
+
+  if (!user) {
+    return next(new ErrorResponse('Invalid Token', 400));
+  }
+
+  //Set new Password
+  user.password = req.body.password;
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpire = undefined;
+  await user.save();
+
+  sendTokenResponse(user, 200, res);
 });
 
 // Get token from model, create cookie and send response
